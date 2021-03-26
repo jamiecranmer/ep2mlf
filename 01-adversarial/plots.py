@@ -6,10 +6,11 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 
 
-def distribution (y, var, X=None, xlabel='', ylabel='', legend=True, bins=50, ax=None):
+def distribution (y, var, X=None, xlabel='', ylabel='', legend=True, bins=np.linspace(0,1,100,endpoint=True), ax=None):
     """
     ...
     """
+    plt.rcParams.update({'font.size': 20})
     # Check(s)
     if isinstance(var, int):
         assert X is not None, "Requested plot of integer variable with no feature array."
@@ -18,7 +19,7 @@ def distribution (y, var, X=None, xlabel='', ylabel='', legend=True, bins=50, ax
 
     # Define variable(s)
     sig = (y == 1)
-    common = dict(bins=bins, alpha=0.5)
+    common = dict(bins=bins)
 
     # Ensure axes exist
     if ax is None:
@@ -32,12 +33,14 @@ def distribution (y, var, X=None, xlabel='', ylabel='', legend=True, bins=50, ax
     wbkg = np.ones((nbkg,)) / float(nbkg)
 
     # Plot distributions
-    ax.hist(var[ sig], weights=wsig, color='b', label='Signal',     **common)
-    ax.hist(var[~sig], weights=wbkg, color='r', label='Background', **common)
+    ax.hist(var[ sig], weights=wsig, color='r', histtype='step', linewidth = 2, label='Signal',     **common)
+    ax.hist(var[~sig], weights=wbkg, color='b', histtype='step', linewidth = 2, label='Background', **common)
 
     # Decorations
     ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel or 'Fraction of jets')
+    ax.set_yscale("log")
+    ax.set_xlim((0,1))
+    ax.set_ylabel(ylabel or 'Fraction of Events')
     if legend:
         ax.legend()
         pass
@@ -45,88 +48,11 @@ def distribution (y, var, X=None, xlabel='', ylabel='', legend=True, bins=50, ax
     return ax
 
 
-def roc (y_true, y_preds, labels=None, legend=True, ax=None):
+def profile (m, ys, labels=None, bins=np.linspace(100,150,50,endpoint=True), ax=None):
     """
     ...
     """
-
-    # Check(s)
-    if not isinstance(y_preds, list):
-        y_preds = [y_preds]
-        pass
-
-    N = len(y_preds)
-    assert N > 0, "[roc] No predictions provided"
-
-    if labels is None:
-        labels = [None for _ in range(N)]
-    else:
-        if isinstance(labels, str):
-            labels = [labels]
-            pass
-        assert len(labels) == N, "[roc] Number of predictions ({}) and associated labels ({}) do not match.".format(N, len(labels))
-        pass
-
-    # Calculate ROC curves
-    fprs, tprs = list(), list()
-    for ix in range(N):
-
-        # -- Skip None's
-        if y_preds[ix] is None:
-            fprs.append(None)
-            tprs.append(None)
-            continue
-
-        # -- Get ROC curve
-        fpr, tpr, _ = roc_curve(y_true, y_preds[ix])
-
-        # -- Check sign
-        if auc(fpr, tpr) < 0.5:
-            fpr = 1. - fpr
-            tpr = 1. - tpr
-            pass
-
-        # -- Mask out zero efficiencies
-        msk = (tpr > 0) & (fpr > 0)
-        fpr = fpr[msk]
-        tpr = tpr[msk]
-
-        # -- Append
-        fprs.append(fpr)
-        tprs.append(tpr)
-        pass
-
-    # Ensure axes exist
-    if ax is None:
-        _, ax = plt.subplots(figsize=(6,5))
-        pass
-
-    # Plot ROC curves
-    ax.plot(tprs[0], 1./tprs[0], 'k:', label='Random guessing')
-    for label, tpr, fpr in zip(labels, tprs, fprs):
-        if tpr is None:
-            ax.plot([0], [0])
-        else:
-            ax.plot(tpr, 1./fpr, label=label)
-            pass
-        pass
-
-    # Decorations
-    ax.set_xlabel('Signal efficiency')
-    ax.set_ylabel('Background rejection')
-    ax.set_yscale("log", nonposy='clip')
-    if legend:
-        ax.legend()
-        pass
-
-    return None
-
-
-def profile (m, ys, labels=None, bins=40, ax=None):
-    """
-    ...
-    """
-
+    plt.rcParams.update({'font.size': 20})
     # Check(s)
     if isinstance(bins, int):
         bins = np.linspace(m.min(), m.max(), bins + 1, endpoint=True)
@@ -169,22 +95,23 @@ def profile (m, ys, labels=None, bins=40, ax=None):
         pass
 
     # Decorations
-    ax.set_xlabel('Jet mass [GeV]')
-    ax.set_ylabel('Average value of observable')
+    ax.set_xlabel('Mass [GeV]')
+    ax.set_ylabel('Average Value')
+    ax.set_ylim((0,1))
     ax.set_xlim(bins[0], bins[-1])
-    ax.set_ylim(0, 1)
     ax.legend()
 
     return ax
 
 
-def sculpting (m, y, preds, labels=None, effsig=0.5, bins=40, ax=None):
+def sculpting (m, y, preds, labels=None, effsig = 0.5, bins=40, ax=None):
     """
     ...
     """
+    plt.rcParams.update({'font.size': 20})
     # Check(s)
     if isinstance(bins, int):
-        bins = np.linspace(m.min(), m.max(), bins + 1, endpoint=True)
+        bins = np.linspace(100, 150, 50, endpoint=True)
         pass
 
     if not isinstance(preds, list):
@@ -219,9 +146,9 @@ def sculpting (m, y, preds, labels=None, effsig=0.5, bins=40, ax=None):
     wbkg = np.ones((nbkg,)) / float(nbkg)
 
     # Draw original mass spectrum, legend header
-    ax.hist(m[ sig], color='red',  bins=bins, weights=wsig, label='Signal, incl.', histtype='step', lw=2)
-    ax.hist(m[~sig], color='blue', bins=bins, weights=wbkg, label='Background, incl.', histtype='step', lw=2)
-    ax.hist([0], weights=[0], color='black', label='Bkgds., $\\varepsilon_{{sig}} = {:.0f}\%$ cut'.format(effsig * 100.), **common)
+    ax.hist(m[ sig], color='red',  bins=bins, weights=wsig, label='Signal', histtype='step', lw=2)
+    ax.hist(m[~sig], color='blue', bins=bins, weights=wbkg, label='Background', histtype='step', lw=2)
+    # ax.hist([0], weights=[0], color='black', label='Bkgds., $\\varepsilon_{{sig}} = {:.0f}\%$ cut'.format(effsig * 100.), **common)
 
     # Draw post-cut mass spectra
     for pred, label in zip(preds, labels):
@@ -238,16 +165,15 @@ def sculpting (m, y, preds, labels=None, effsig=0.5, bins=40, ax=None):
         ax.hist(m[msk],  weights=wmsk, label="   " + label, **common)
         pass
 
-    ax.set_ylabel('Fraction of jets')
-    ax.set_xlabel('Jet mass [GeV]')
-    ax.set_yscale('log')
-    ax.set_ylim(1.0E-03, 5.0E-01)
+    ax.set_ylabel('Fraction of Events /GeV')
+    ax.set_xlabel('Mass [GeV]')
+    ax.set_xlim((100, 150))
     ax.legend()
 
     return ax
 
 
-def posterior (adv, m, z, nb_bins=100, title=''):
+def posterior (adv, m, z, nb_bins=np.linspace(90, 180, 50, endpoint=True), title=''):
     """
     ...
     Arguments:
@@ -255,10 +181,10 @@ def posterior (adv, m, z, nb_bins=100, title=''):
         Z: Classifier outputs
         nb_bins: ...
         title: ...
-
     Returns:
         fig, ax: ...
     """
+    plt.rcParams.update({'font.size': 20})
     # Definitions
     scale = m.max()
     colours = ['r', 'g', 'b']
@@ -267,14 +193,14 @@ def posterior (adv, m, z, nb_bins=100, title=''):
 
 
     # Binning, scaled and not
-    mt_pdf = np.linspace(0, 1., nb_bins + 1, endpoint=True)
+    mt_pdf = np.linspace(0, 1., 1000 + 1, endpoint=True)
     bins = mt_pdf * scale
 
     fig, ax = plt.subplots(1, 2, figsize=(10,4), sharey=True)
 
     # -- Left pane
     # Draw inclusive background jet distribution
-    ax[0].hist(m, bins, density=1., alpha=0.3, color='black', label='Background, incl.')
+    ax[0].hist(m, nb_bins, density=1., alpha=0.3, color='black', label='Background')
     for col, z_ in zip(colours, zs):
         # Draw adversary posterior p.d.f. for classifier output `z`
         posterior = adv.predict([z_*np.ones_like(mt_pdf), mt_pdf])
@@ -282,12 +208,12 @@ def posterior (adv, m, z, nb_bins=100, title=''):
         pass
 
     # -- Right pane
-    ax[1].hist([0], bins, alpha=0.3, weights=[0], color='black', label='Background, $z_{NN}$-bin.')
+    ax[1].hist([0], nb_bins, alpha=0.3, weights=[0], color='black', label='Background, $z_{NN}$-bin.')
     for col, z_ in zip(colours, zs):
         # Draw background jet distribution for classifier output `z`
         msk = np.abs(z - z_).ravel() < tol
 
-        ax[1].hist(m[msk], bins, color=col, density=1., alpha=0.3, label='  {:.2f} < $z_{{NN}}$ < {:.2f}'.format(z_ - tol, z_ + tol))
+        ax[1].hist(m[msk], nb_bins, color=col, density=1., alpha=0.3, label='  {:.2f} < $z_{{NN}}$ < {:.2f}'.format(z_ - tol, z_ + tol))
 
         # Draw adversary posterior p.d.f. for classifier output `z`
         posterior = adv.predict([z_*np.ones_like(mt_pdf), mt_pdf])
@@ -298,8 +224,10 @@ def posterior (adv, m, z, nb_bins=100, title=''):
     ax[0].legend()
     ax[1].legend()
     ax[0].set_ylabel('Probability density')
-    ax[0].set_xlabel('Jet mass [GeV]')
-    ax[1].set_xlabel('Jet mass [GeV]')
+    ax[0].set_xlabel('Mass [GeV]')
+    ax[1].set_xlabel('Mass [GeV]')
+    ax[0].set_xlim((90,180))
+    ax[1].set_xlim((90,180))
     fig.suptitle(title)
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     return ax

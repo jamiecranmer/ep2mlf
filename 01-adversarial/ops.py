@@ -16,7 +16,6 @@ def cumulative (x):
 def gaussian_integral_on_unit_interval (mean, width, backend=K):
     """
     Compute the integral of unit gaussians on the unit interval.
-
     Args:
         mean: Mean(s) of unit gaussian(s).
         width: Width(s) of unit gaussian(s).
@@ -35,7 +34,6 @@ def gaussian_integral_on_unit_interval (mean, width, backend=K):
 def gaussian (x, coeff, mean, width, backend=K):
     """
     Compute a unit gaussian using Keras-backend methods.
-
     Args:
         x: Variable value(s) at which to evaluate unit gaussian(s).
         coeff: Normalisation constant(s) for unit gaussian(s).
